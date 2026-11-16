@@ -1,0 +1,14 @@
+export const CAMPUS_STATUS = ['active', 'opening', 'closed'];
+export const AUDIENCES = ['adults', 'teens', 'children'];
+export const STUDENT_STATUS = ['prospect', 'active', 'inactive', 'graduated'];
+export const GENDERS = ['male', 'female'];
+export const GROUP_STATUS = ['planned', 'ongoing', 'completed', 'cancelled'];
+export const ENROLLMENT_STATUS = ['active', 'completed', 'dropped', 'transferred'];
+export const FINAL_RESULTS = ['pending', 'passed', 'failed'];
+export const ATTENDANCE_STATUS = ['present', 'absent', 'late', 'excused'];
+export const EXAM_TYPES = ['placement', 'quiz', 'midterm', 'final', 'oral'];
+export const EXAM_STATUS = ['scheduled', 'graded'];
+export const INVOICE_STATUS = ['unpaid', 'partial', 'paid', 'cancelled'];
+export const PAYMENT_METHODS = ['cash', 'card', 'transfer', 'cheque'];
+export const NOTIFICATION_SEVERITY = ['info', 'warning', 'danger'];
+export const DEFAULT_LEVEL_COUNT = 6;

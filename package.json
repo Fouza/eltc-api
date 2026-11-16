@@ -1,0 +1,41 @@
+{
+  "name": "eltc-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ELTC School back-office API (Express 5 + MongoDB)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --env-file=.env --watch src/index.js",
+    "dev:scheduler": "node --env-file=.env --watch src/scheduler/index.js",
+    "start": "node src/index.js",
+    "scheduler": "node src/scheduler/index.js",
+    "seed": "node --env-file=.env src/scripts/seed.js",
+    "create-admin": "node --env-file=.env src/scripts/createAdmin.js",
+    "sync-indexes": "node --env-file=.env src/scripts/syncIndexes.js",
+    "run-jobs": "node --env-file=.env src/scripts/runJobsOnce.js",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "cron": "^4.4.0",
+    "dayjs": "^1.11.23",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.12.1",
+    "morgan": "^1.12.1",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "supertest": "^7.3.2",
+    "vitest": "^5.1.0"
+  }
+}
