@@ -32,7 +32,6 @@ export const seedBasics = async () => {
   const groupB = await m.groupsCollection.create({ name: 'FR-1 B', program: program._id, levelNumber: 1, campus: campusB._id, status: 'ongoing' });
   await databaseApi.insertUser({ firstName: 'A', lastName: 'Dmin', email: 'admin@test.io', password: 'Password123', roles: ['admin'] });
   await databaseApi.insertUser({ firstName: 'S', lastName: 'Ecretary', email: 'sec@test.io', password: 'Password123', roles: ['secretary'], campusIds: [campusA._id] });
-  await databaseApi.insertUser({ firstName: 'C', lastName: 'Oord', email: 'coord@test.io', password: 'Password123', roles: ['coordinator'] });
   return { campusA, campusB, program, group, groupB };
 };
 

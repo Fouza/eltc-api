@@ -2,8 +2,8 @@ import { settingsCollection } from '../../../models/index.js';
 import { pick } from '../../../helpers/strings.js';
 
 const FIELDS = [
-  'schoolName', 'currency', 'locale', 'defaultMaxScore', 'defaultPassScore', 'defaultInstallments',
-  'lowAttendanceThreshold', 'overdueGraceDays', 'groupAlmostFullRatio',
+  'schoolName', 'currency', 'locale', 'defaultMaxScore', 'defaultPassScore',
+  'lowAttendanceThreshold', 'groupAlmostFullRatio',
 ];
 
 const updateSettings = (data) =>

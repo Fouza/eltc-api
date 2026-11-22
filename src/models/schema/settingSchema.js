@@ -9,9 +9,7 @@ const settingSchema = new Schema(
     locale: { type: String, default: 'fr-FR' },
     defaultMaxScore: { type: Number, default: 20 },
     defaultPassScore: { type: Number, default: 10 },
-    defaultInstallments: { type: Number, default: 1 },
     lowAttendanceThreshold: { type: Number, default: 3 }, // absences in the last 30 days
-    overdueGraceDays: { type: Number, default: 0 },
     groupAlmostFullRatio: { type: Number, default: 0.9 },
   },
   { timestamps: true },

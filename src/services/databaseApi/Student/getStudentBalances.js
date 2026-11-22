@@ -9,7 +9,7 @@ const getStudentBalances = async (studentIds) => {
       $group: {
         _id: '$student',
         due: { $sum: { $subtract: ['$amount', '$paidAmount'] } },
-        overdue: { $sum: { $cond: [{ $lt: ['$dueDate', startOfToday()] }, { $subtract: ['$amount', '$paidAmount'] }, 0] } },
+        overdue: { $sum: { $cond: [{ $lt: ['$overdueAt', startOfToday()] }, { $subtract: ['$amount', '$paidAmount'] }, 0] } },
       },
     },
   ]);

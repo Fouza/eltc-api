@@ -2,16 +2,23 @@ import mongoose from 'mongoose';
 import { invoicesCollection } from '../../../models/index.js';
 import { campusFilter } from '../../../helpers/campusScope.js';
 import { getPagination, paginated } from '../../../helpers/pagination.js';
-import { startOfToday } from '../../../helpers/dates.js';
+import { isOverdue, isOverdueFilter } from '../../../helpers/dates.js';
+
+const oid = (v) => new mongoose.Types.ObjectId(String(v));
 
 // status: unpaid | partial | paid | cancelled | open (unpaid+partial) | overdue
+// kind: course | book | other · group · book · handedOver: yes | no (books)
 export const buildInvoiceFilter = (query, user) => {
   const filter = { ...campusFilter(user, query.campus) };
-  const today = startOfToday();
-  if (query.status === 'overdue') Object.assign(filter, { status: { $in: ['unpaid', 'partial'] }, dueDate: { $lt: today } });
+  if (query.status === 'overdue') Object.assign(filter, isOverdueFilter());
   else if (query.status === 'open') filter.status = { $in: ['unpaid', 'partial'] };
   else if (query.status) filter.status = query.status;
-  if (query.student) filter.student = new mongoose.Types.ObjectId(String(query.student));
+  if (query.student) filter.student = oid(query.student);
+  if (query.kind) filter.kind = query.kind === 'course' ? { $in: ['course', null] } : query.kind;
+  if (query.group) filter.group = oid(query.group);
+  if (query.book) filter.book = oid(query.book);
+  if (query.handedOver === 'yes') filter.handedOverAt = { $ne: null };
+  if (query.handedOver === 'no') filter.handedOverAt = null;
   if (query.from || query.to) {
     filter.dueDate = { ...filter.dueDate };
     if (query.from) filter.dueDate.$gte = new Date(query.from);
@@ -23,12 +30,13 @@ export const buildInvoiceFilter = (query, user) => {
 const getInvoices = async (query, user) => {
   const filter = buildInvoiceFilter(query, user);
   const pagination = getPagination(query, 50);
-  const today = startOfToday();
   const [items, total, [totals]] = await Promise.all([
     invoicesCollection
       .find(filter)
       .populate('student', 'firstName lastName studentNumber phone guardian')
       .populate('campus', 'name code color')
+      .populate('group', 'name')
+      .populate('book', 'title')
       .populate({ path: 'enrollment', select: 'group levelNumber', populate: { path: 'group', select: 'name' } })
       .sort(query.status === 'paid' ? { updatedAt: -1 } : { dueDate: 1 })
       .skip(pagination.skip)
@@ -42,7 +50,7 @@ const getInvoices = async (query, user) => {
   ]);
   return {
     ...paginated(
-      items.map((i) => ({ ...i, isOverdue: ['unpaid', 'partial'].includes(i.status) && i.dueDate < today })),
+      items.map((i) => ({ ...i, isOverdue: isOverdue(i) })),
       total,
       pagination,
     ),

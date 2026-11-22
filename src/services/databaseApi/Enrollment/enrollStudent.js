@@ -1,17 +1,26 @@
+import dayjs from 'dayjs';
 import { enrollmentsCollection, groupsCollection, studentsCollection, invoicesCollection } from '../../../models/index.js';
 import { badRequest, conflict, notFound } from '../../../helpers/errors.js';
 import generateNumber from '../Counter/generateNumber.js';
 import buildInstallments from '../Invoice/buildInstallments.js';
+import buildMonthlyPlan from '../Invoice/buildMonthlyPlan.js';
+import { levelLabel } from '../../../constants/enums.js';
+import { toDay } from '../../../helpers/dates.js';
+import getBooksForLevel from '../Book/getBooksForLevel.js';
 
-// Puts a student in a group and creates the invoices (1 to 12 installments).
+// Puts a student in a group and creates the invoices.
+// plan 'monthly' (default): the fee split by the level's months, due at the start of each month (see buildMonthlyPlan).
+// plan 'custom': a hand-made split, 1 to 12 installments a month apart from firstDueDate.
+// Books: one invoice per book of the level (all of them unless `books` lists the ids to charge), no discount,
+// due on enrollment and overdue at the end of the level.
 // Returns { enrollment, invoices, group: { capacity, enrolledCount } } so the route can warn when the group is almost full.
 const enrollStudent = async (
-  { studentId, groupId, fee, discount = 0, discountReason, installments = 1, firstDueDate, force = false, notes },
+  { studentId, groupId, fee, discount = 0, discountReason, plan = 'monthly', installments = 1, firstDueDate, enrolledAt, books, force = false, notes },
   userId,
 ) => {
   const [student, group] = await Promise.all([
     studentsCollection.findById(studentId).lean(),
-    groupsCollection.findById(groupId).populate('program', 'name levels').lean(),
+    groupsCollection.findById(groupId).populate('program', 'name levels audience').lean(),
   ]);
   if (!student) throw notFound('Student not found');
   if (!group) throw notFound('Group not found');
@@ -37,27 +46,59 @@ const enrollStudent = async (
     discountReason,
     notes,
     createdBy: userId,
+    ...(enrolledAt ? { enrolledAt } : {}),
   });
 
   const invoices = [];
   if (netFee > 0) {
-    const due = firstDueDate ? new Date(firstDueDate) : new Date();
-    for (const part of buildInstallments(netFee, installments, due)) {
-      const label = `${group.program.name} · Level ${group.levelNumber}${part.installment.count > 1 ? ` (${part.installment.index}/${part.installment.count})` : ''}`;
+    const weeks = level?.durationWeeks ?? (group.startDate && group.endDate ? dayjs(group.endDate).diff(group.startDate, 'week') : 0);
+    const parts = plan === 'custom'
+      ? buildInstallments(netFee, installments, firstDueDate ? new Date(firstDueDate) : new Date())
+      : buildMonthlyPlan({ total: netFee, weeks, startDate: group.startDate, joinDate: enrolledAt ?? new Date() });
+    const levelName = levelLabel(group.levelNumber, group.program.levels, group.program.audience);
+    for (const { share, ...part } of parts) {
+      const { index, count } = part.installment;
+      const suffix = count <= 1 ? '' : plan === 'custom' ? ` (${index}/${count})` : ` · month ${index}/${count}${share < 1 ? ' (half)' : ''}`;
+      const label = `${group.program.name} · ${levelName}${suffix}`;
       invoices.push(
         (
           await invoicesCollection.create({
             ...part,
             label,
+            kind: 'course',
             number: await generateNumber('INV'),
             student: studentId,
             enrollment: enrollment._id,
+            group: group._id,
             campus: group.campus,
             createdBy: userId,
           })
         ).toObject(),
       );
     }
+  }
+
+  const levelEnd = group.endDate ?? dayjs(group.startDate ?? enrolledAt ?? new Date()).add(level?.durationWeeks ?? 12, 'week').toDate();
+  const levelBooks = (await getBooksForLevel(group.program._id, group.levelNumber)).filter((b) => !books || books.map(String).includes(String(b._id)));
+  for (const book of levelBooks.filter((b) => b.price > 0)) {
+    invoices.push(
+      (
+        await invoicesCollection.create({
+          label: book.title,
+          kind: 'book',
+          book: book._id,
+          amount: book.price,
+          dueDate: toDay(enrolledAt ?? new Date()),
+          overdueAt: levelEnd,
+          number: await generateNumber('INV'),
+          student: studentId,
+          enrollment: enrollment._id,
+          group: group._id,
+          campus: group.campus,
+          createdBy: userId,
+        })
+      ).toObject(),
+    );
   }
 
   // The student is now placed: they leave the waiting list.

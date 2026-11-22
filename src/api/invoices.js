@@ -30,6 +30,14 @@ export default () => {
     res.json(await databaseApi.updateInvoice(req.params.id, req.body));
   });
 
+  // Books: the student received their copy (or undo). Moves the campus stock.
+  router.post('/:id/handover', requireRoles(CAN.manageInvoices), async (req, res) => {
+    const invoice = await databaseApi.getInvoiceById(req.params.id);
+    if (!invoice) throw notFound('Invoice not found');
+    assertCampusAccess(req.user, invoice.campus?._id);
+    res.json(await databaseApi.setBookHandover(req.params.id, req.body.handedOver !== false));
+  });
+
   router.post('/:id/cancel', requireRoles(CAN.manageInvoices), async (req, res) => {
     res.json(await databaseApi.cancelInvoice(req.params.id));
   });

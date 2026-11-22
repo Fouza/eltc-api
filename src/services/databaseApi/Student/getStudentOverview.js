@@ -2,7 +2,7 @@ import {
   enrollmentsCollection, invoicesCollection, paymentsCollection, attendancesCollection, examsCollection,
 } from '../../../models/index.js';
 import getStudentById from './getStudentById.js';
-import { startOfToday } from '../../../helpers/dates.js';
+import { isOverdue } from '../../../helpers/dates.js';
 
 // Everything for the student profile page in one call.
 const getStudentOverview = async (id) => {
@@ -35,13 +35,12 @@ const getStudentOverview = async (id) => {
       .lean(),
   ]);
 
-  const today = startOfToday();
   const open = invoices.filter((i) => ['unpaid', 'partial'].includes(i.status));
   const finance = {
     billed: invoices.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.amount, 0),
     paid: payments.reduce((s, p) => s + p.amount, 0),
     due: open.reduce((s, i) => s + i.amount - i.paidAmount, 0),
-    overdue: open.filter((i) => i.dueDate < today).reduce((s, i) => s + i.amount - i.paidAmount, 0),
+    overdue: open.filter(isOverdue).reduce((s, i) => s + i.amount - i.paidAmount, 0),
   };
 
   const sessions = attendance.map((a) => ({ _id: a._id, date: a.date, topic: a.topic, group: a.group, ...a.entries[0] }));
@@ -51,7 +50,7 @@ const getStudentOverview = async (id) => {
   return {
     student,
     enrollments,
-    invoices: invoices.map((i) => ({ ...i, isOverdue: ['unpaid', 'partial'].includes(i.status) && i.dueDate < today })),
+    invoices: invoices.map((i) => ({ ...i, isOverdue: isOverdue(i) })),
     payments,
     finance,
     attendance: {

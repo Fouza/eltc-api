@@ -3,7 +3,7 @@ import {
   studentsCollection, groupsCollection, enrollmentsCollection, invoicesCollection, paymentsCollection, attendancesCollection, examsCollection,
 } from '../../../models/index.js';
 import { campusFilter } from '../../../helpers/campusScope.js';
-import { startOfToday } from '../../../helpers/dates.js';
+import { isOverdueFilter, startOfToday } from '../../../helpers/dates.js';
 import { CAN } from '../../../constants/roles.js';
 import getGroups from '../Group/getGroups.js';
 
@@ -102,7 +102,7 @@ const getDashboardSummary = async (user, query = {}) => {
     sum(paymentsCollection, { ...scope, paidAt: { $gte: monthStart } }, '$amount'),
     sum(paymentsCollection, { ...scope, paidAt: { $gte: lastMonthStart, $lt: monthStart } }, '$amount'),
     sum(invoicesCollection, open, { $subtract: ['$amount', '$paidAmount'] }),
-    sum(invoicesCollection, { ...open, dueDate: { $lt: today } }, { $subtract: ['$amount', '$paidAmount'] }),
+    sum(invoicesCollection, { ...open, ...isOverdueFilter() }, { $subtract: ['$amount', '$paidAmount'] }),
   ]);
 
   // Revenue (payments received) vs billed (invoices due) for the last 6 months.
@@ -122,7 +122,7 @@ const getDashboardSummary = async (user, query = {}) => {
   const bil = Object.fromEntries(billed.map((r) => [r._id, r.total]));
 
   const overdueInvoices = await invoicesCollection
-    .find({ ...open, dueDate: { $lt: today } })
+    .find({ ...open, ...isOverdueFilter() })
     .populate('student', 'firstName lastName phone studentNumber')
     .sort({ dueDate: 1 })
     .limit(6)

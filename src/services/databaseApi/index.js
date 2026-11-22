@@ -120,3 +120,14 @@ export { default as insertUser } from './User/insertUser.js';
 export { default as touchUserLogin } from './User/touchUserLogin.js';
 export { default as updateUser } from './User/updateUser.js';
 export { default as updateUserPassword } from './User/updateUserPassword.js';
+
+// Book
+export { default as adjustBookStock } from './Book/adjustBookStock.js';
+export { default as changeBookStock } from './Book/changeBookStock.js';
+export { default as deleteBook } from './Book/deleteBook.js';
+export { default as getBookById } from './Book/getBookById.js';
+export { default as getBooks } from './Book/getBooks.js';
+export { default as getBooksForLevel } from './Book/getBooksForLevel.js';
+export { default as insertBook } from './Book/insertBook.js';
+export { default as setBookHandover } from './Book/setBookHandover.js';
+export { default as updateBook } from './Book/updateBook.js';

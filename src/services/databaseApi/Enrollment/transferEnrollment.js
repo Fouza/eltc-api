@@ -28,7 +28,7 @@ const transferEnrollment = async (id, targetGroupId, userId) => {
     createdBy: userId,
   });
   await enrollmentsCollection.updateOne({ _id }, { $set: { status: 'transferred', endedAt: new Date(), transferredTo: created._id } });
-  await invoicesCollection.updateMany({ enrollment: _id, status: { $in: ['unpaid', 'partial'] } }, { $set: { enrollment: created._id, campus: target.campus } });
+  await invoicesCollection.updateMany({ enrollment: _id, status: { $in: ['unpaid', 'partial'] } }, { $set: { enrollment: created._id, group: target._id, campus: target.campus } });
   return created.toObject();
 };
 

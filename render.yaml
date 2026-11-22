@@ -1,0 +1,27 @@
+# Render Blueprint for the API (free plan). Render → New → Blueprint → pick this repository.
+# Values marked `sync: false` are asked for once in the Render dashboard; never commit them.
+services:
+  - type: web
+    name: eltc-api
+    runtime: node
+    plan: free # sleeps after 15 min without visits, ~1 min to wake up. Switch to "starter" ($7/month) to keep it awake.
+    region: frankfurt # closest Render region to Algeria
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true # redeploys on every push to the default branch (master)
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "24"
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: JWT_SECRET
+        generateValue: true # Render creates a long random value
+      - key: CRON_SECRET
+        generateValue: true # copy it into the GitHub secret CRON_SECRET (see DEPLOY.md)
+      - key: MONGODB_URI
+        sync: false # MongoDB Atlas connection string
+      - key: CORS_ORIGIN
+        sync: false # the Vercel address of the web app, e.g. https://eltc-web.vercel.app

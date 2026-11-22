@@ -1,7 +1,7 @@
-import { DEFAULT_LEVEL_COUNT } from '../../../constants/enums.js';
+import { defaultLevelNames } from '../../../constants/enums.js';
 
-// Every workshop has 6 levels unless said otherwise.
-const buildDefaultLevels = (count = DEFAULT_LEVEL_COUNT, fee = 0) =>
-  Array.from({ length: count }, (_, i) => ({ number: i + 1, name: `Level ${i + 1}`, durationWeeks: 12, hours: 36, fee }));
+// Adults get A1 → C1 (with B1+), children Bounce 1 → 6, unless the program sends its own.
+const buildDefaultLevels = (audience, fee = 0) =>
+  defaultLevelNames(audience).map((name, i) => ({ number: i + 1, name, durationWeeks: audience === 'children' ? 10 : 12, hours: audience === 'children' ? 30 : 36, fee }));
 
 export default buildDefaultLevels;

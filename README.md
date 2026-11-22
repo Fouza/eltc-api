@@ -15,8 +15,8 @@ npm run run-jobs            # run every daily job once, now
 npm test                    # vitest + supertest on the eltc_test database
 ```
 
-Demo logins after `npm run seed`: `admin@eltc.school / Admin123!`, and `secretary@`, `accountant@`, `coordinator@eltc.school` with `Staff123!`
-(the secretary is limited to Centre Campus to show campus-level access).
+Demo logins after `npm run seed`: `admin@eltc.school / Admin123!`, and `secretary@eltc.school / Staff123!`
+(the secretary is limited to the Reghaia campus to show campus-level access).
 
 ## Domain
 
@@ -24,7 +24,7 @@ Demo logins after `npm run seed`: `admin@eltc.school / Admin123!`, and `secretar
 |---|---|
 | `campuses` | School locations (`status: active / opening / closed`) |
 | `languages` | French, English, Spanish… |
-| `programs` | A "workshop": one language for one audience (adults, teens, children) with its **levels** (6 by default, each with a fee and duration) |
+| `programs` | A "workshop": one language for one audience (adults or children) with its **levels** (6 by default, each with a fee and duration) |
 | `teachers` | Records only, teachers don't log in |
 | `groups` | A class: program + level + campus + teacher + weekly `schedule` + capacity + dates |
 | `students` | The paper registration form. `status: prospect` + `desiredProgram/desiredLevel` = waiting list |
@@ -41,7 +41,7 @@ Demo logins after `npm run seed`: `admin@eltc.school / Admin123!`, and `secretar
 ## Roles
 
 Defined once in `src/constants/roles.js` (`CAN` = who may write what; every logged-in user may read):
-`admin` (school manager: everything, users, settings), `secretary`, `accountant`, `coordinator`.
+`admin` (school manager: everything, including staff accounts, campuses and settings) and `secretary` (everything else). A secretary can be limited to one or more campuses.
 A user with `campusIds: []` sees every campus; otherwise only theirs (`helpers/campusScope.js`).
 
 ## Endpoints (all under `/api`, `Authorization: Bearer <JWT>` except `auth/login` and `health`)

@@ -9,3 +9,8 @@ export const toDay = (d) => {
 export const startOfToday = () => toDay(new Date());
 
 export const addMonths = (d, n) => dayjs(d).add(n, 'month').toDate();
+
+// Overdue = unpaid and its overdueAt date has passed (stored on each invoice, see invoiceSchema).
+// Course months: one month after the due date. Books: the end of the level.
+export const isOverdueFilter = () => ({ status: { $in: ['unpaid', 'partial'] }, overdueAt: { $lt: startOfToday() } });
+export const isOverdue = (i) => ['unpaid', 'partial'].includes(i.status) && i.overdueAt < startOfToday();

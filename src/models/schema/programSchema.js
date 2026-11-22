@@ -5,7 +5,7 @@ import { AUDIENCES } from '../../constants/enums.js';
 const levelSchema = new Schema(
   {
     number: { type: Number, required: true, min: 1 },
-    name: { type: String, trim: true }, // e.g. "Level 1 – Beginner" or "A1"
+    name: { type: String, trim: true }, // default: "A1" … "C1" for adults, "Bounce 1" … "Bounce 6" for children
     description: { type: String, trim: true },
     durationWeeks: { type: Number, default: 12 },
     hours: { type: Number, default: 36 },

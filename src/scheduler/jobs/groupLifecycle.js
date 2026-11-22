@@ -19,7 +19,7 @@ export const runGroupLifecycle = async () => {
       message: 'Record the final exam, then promote the students who passed and close the group.',
       link: `/groups/${g._id}`,
       campus: g.campus?._id,
-      roles: [ROLES.COORDINATOR],
+      roles: [ROLES.SECRETARY],
       dedupeKey: `group_ended:${g._id}`,
     });
   }

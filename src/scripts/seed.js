@@ -7,6 +7,8 @@ import * as m from '../models/index.js';
 import * as databaseApi from '../services/databaseApi/index.js';
 import { runners } from '../scheduler/jobs/index.js';
 import { toDay } from '../helpers/dates.js';
+import { defaultLevelNames, levelLabel } from '../constants/enums.js';
+import { scheduleFromSessions, sessionsLabel, sortSessions } from '../constants/sessions.js';
 
 if (config.env === 'production' || /prod/i.test(config.mongoUri ?? '')) throw new Error('Refusing to seed a production database');
 
@@ -15,6 +17,12 @@ let s = 42;
 const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
 const pickOne = (arr) => arr[Math.floor(rnd() * arr.length)];
 const chance = (p) => rnd() < p;
+
+// The seed WIPES the database. Refuse anything that looks like production unless explicitly forced.
+if ((config.env === 'production' || /mongodb\+srv:|mongodb\.net/.test(config.mongoUri ?? '')) && process.env.ALLOW_SEED !== 'yes') {
+  console.error('Refusing to seed: this looks like a production database (it would be wiped). Set ALLOW_SEED=yes to force.');
+  process.exit(1);
+}
 
 await initializeDb();
 await mongoose.connection.dropDatabase();
@@ -29,8 +37,6 @@ const admin = await databaseApi.insertUser({
 });
 const staffPassword = 'Staff123!';
 const secretary = await databaseApi.insertUser({ firstName: 'Amina', lastName: 'Benali', email: 'secretary@eltc.school', password: staffPassword, roles: ['secretary'] });
-await databaseApi.insertUser({ firstName: 'Karim', lastName: 'Haddad', email: 'accountant@eltc.school', password: staffPassword, roles: ['accountant'] });
-await databaseApi.insertUser({ firstName: 'Sophie', lastName: 'Martin', email: 'coordinator@eltc.school', password: staffPassword, roles: ['coordinator'] });
 
 // ---------- campuses
 const room = (n) => Array.from({ length: n }, (_, i) => ({ name: `Room ${i + 1}`, capacity: 14 }));
@@ -48,17 +54,25 @@ const [fr, en, es] = await m.languagesCollection.insertMany([
   { name: 'English', code: 'en', color: '#7B3FE4' },
   { name: 'Spanish', code: 'es', color: '#F59E0B' },
 ]);
-const LEVEL_NAMES = ['Beginner', 'Elementary', 'Pre-intermediate', 'Intermediate', 'Upper-intermediate', 'Advanced'];
-const levels = (fee, weeks = 12) => LEVEL_NAMES.map((name, i) => ({ number: i + 1, name: `Level ${i + 1} – ${name}`, durationWeeks: weeks, hours: weeks * 3, fee: fee + i * 1000 }));
+const levels = (fee, weeks = 12, audience = 'adults') => defaultLevelNames(audience).map((name, i) => ({ number: i + 1, name, durationWeeks: weeks, hours: weeks * 3, fee: fee + i * 1000 }));
 const programs = await m.programsCollection.insertMany([
   { name: 'French – Adults', language: fr._id, audience: 'adults', minAge: 16, levels: levels(18000), color: '#064CA5' },
-  { name: 'French – Children', language: fr._id, audience: 'children', minAge: 6, maxAge: 12, levels: levels(14000, 10), color: '#3B82F6' },
+  { name: 'French – Children', language: fr._id, audience: 'children', minAge: 6, maxAge: 15, levels: levels(14000, 10, 'children'), color: '#3B82F6' },
   { name: 'English – Adults', language: en._id, audience: 'adults', minAge: 16, levels: levels(20000), color: '#7B3FE4' },
-  { name: 'English – Children', language: en._id, audience: 'children', minAge: 6, maxAge: 12, levels: levels(15000, 10), color: '#A855F7' },
-  { name: 'English – Teens', language: en._id, audience: 'teens', minAge: 13, maxAge: 17, levels: levels(17000), color: '#EC4899' },
+  { name: 'English – Children', language: en._id, audience: 'children', minAge: 6, maxAge: 15, levels: levels(15000, 10, 'children'), color: '#A855F7' },
   { name: 'Spanish – Adults', language: es._id, audience: 'adults', minAge: 16, levels: levels(18000), color: '#F59E0B' },
 ]);
-const [frA, frC, enA, enC, enT, esA] = programs;
+const [frA, frC, enA, enC, esA] = programs;
+
+// ---------- books (one per level, plus a notebook shared by French adults and children), stock in the two open campuses
+const bookSeries = [[enA, 'English File', 3500], [frA, 'Édito', 3800], [esA, 'Aula Internacional', 3600], [enC, 'Bounce Now', 2800], [frC, 'Les Loustics', 2600]];
+const bookDocs = bookSeries.flatMap(([program, series, price]) =>
+  program.levels.map((l) => ({ title: `${series} ${program.audience === 'children' ? l.number : l.name}`, publisher: series, price, levels: [{ program: program._id, levelNumber: l.number }] })),
+);
+bookDocs.push({ title: 'ELTC French notebook', publisher: 'ELTC', price: 800, levels: [{ program: frA._id, levelNumber: 1 }, { program: frC._id, levelNumber: 1 }] });
+await m.booksCollection.insertMany(
+  bookDocs.map((b) => ({ ...b, stock: [{ campus: rgh._id, quantity: 12 + Math.floor(rnd() * 25) }, { campus: rba._id, quantity: 12 + Math.floor(rnd() * 25) }] })),
+);
 
 // ---------- teachers
 const teacherData = [
@@ -76,25 +90,28 @@ const T = Object.fromEntries(teachers.map((t) => [t.firstName, t]));
 
 // ---------- groups
 const weeksAgo = (w) => toDay(dayjs().subtract(w, 'week'));
-const slots = (days, start, end) => days.map((day) => ({ day, startTime: start, endTime: end }));
-const g = (name, program, levelNumber, campus, teacher, schedule, startW, weeks, status, capacity = 12) => ({
-  name, program: program._id, levelNumber, campus: campus._id, teacher: teacher._id, schedule, capacity, room: `Room ${1 + Math.floor(rnd() * 4)}`,
+// Groups use the school's fixed sessions; the name follows the app's format ("EN - A1 Adults Saturday Morning + Evening Tue").
+const langCode = { [fr._id]: 'FR', [en._id]: 'EN', [es._id]: 'ES' };
+const g = (program, levelNumber, campus, teacher, sessions, startW, weeks, status, capacity = 12) => ({
+  name: `${langCode[program.language]} - ${levelLabel(levelNumber, program.levels)} ${program.audience === 'children' ? 'Kids' : 'Adults'} ${sessionsLabel(sessions)}`,
+  program: program._id, levelNumber, campus: campus._id, teacher: teacher._id, sessions: sortSessions(sessions), schedule: scheduleFromSessions(sessions),
+  capacity, room: `Room ${1 + Math.floor(rnd() * 4)}`,
   startDate: weeksAgo(startW), endDate: toDay(dayjs(weeksAgo(startW)).add(weeks, 'week')), status,
 });
 const groupDocs = await m.groupsCollection.insertMany([
-  g('FR-A1 Evening', frA, 1, rgh, T.Claire, slots([0, 2], '18:00', '19:30'), 6, 12, 'ongoing'),
-  g('FR-A3 Morning', frA, 3, rgh, T.Yacine, slots([1, 3], '09:30', '11:00'), 5, 12, 'ongoing', 10),
-  g('FR-A2 Weekend', frA, 2, rba, T.Leila, slots([5, 6], '10:00', '12:00'), 7, 12, 'ongoing'),
-  g('FR-C1 Saturday', frC, 1, rgh, T.Nadia, slots([6], '09:00', '11:00'), 4, 10, 'ongoing', 10),
-  g('FR-C2 Wednesday', frC, 2, rba, T.Claire, slots([3], '14:00', '16:00'), 4, 10, 'ongoing', 10),
-  g('EN-A2 Evening', enA, 2, rgh, T.Emily, slots([0, 2], '18:00', '19:30'), 6, 12, 'ongoing'),
-  g('EN-A4 Evening', enA, 4, rba, T.Samir, slots([1, 3], '18:30', '20:00'), 8, 12, 'ongoing'),
-  g('EN-C1 Saturday', enC, 1, rgh, T.James, slots([6], '14:00', '16:00'), 3, 10, 'ongoing', 10),
-  g('EN-T3 Afternoon', enT, 3, rgh, T.Nadia, slots([2, 4], '16:30', '18:00'), 5, 12, 'ongoing'),
-  g('ES-A1 Evening', esA, 1, rba, T.Lucia, slots([1, 3], '18:00', '19:30'), 2, 12, 'ongoing', 12),
-  g('EN-A1 Evening (prev.)', enA, 1, rgh, T.Emily, slots([0, 2], '18:00', '19:30'), 20, 12, 'completed'),
-  g('FR-A2 Evening (next)', frA, 2, rgh, T.Claire, slots([0, 2], '18:00', '19:30'), -6, 12, 'planned'),
-  g('EN-A2 Morning (new)', enA, 2, rba, T.Samir, slots([0, 2], '09:30', '11:00'), -2, 12, 'planned'),
+  g(frA, 1, rgh, T.Claire, ['eve_sun', 'eve_tue'], 6, 12, 'ongoing'),
+  g(frA, 3, rgh, T.Yacine, ['sat_am', 'fri_am'], 5, 12, 'ongoing', 10),
+  g(frA, 2, rba, T.Leila, ['sat_pm', 'fri_pm'], 7, 12, 'ongoing'),
+  g(frC, 1, rgh, T.Nadia, ['sat_am'], 4, 10, 'ongoing', 10),
+  g(frC, 2, rba, T.Claire, ['fri_am'], 4, 10, 'ongoing', 10),
+  g(enA, 2, rgh, T.Emily, ['eve_tue', 'eve_thu'], 6, 12, 'ongoing'),
+  g(enA, 4, rba, T.Samir, ['eve_sun', 'eve_thu'], 8, 12, 'ongoing'),
+  g(enC, 1, rgh, T.James, ['sat_pm'], 3, 10, 'ongoing', 10),
+  g(enC, 3, rgh, T.Nadia, ['fri_pm'], 5, 12, 'ongoing'),
+  g(esA, 1, rba, T.Lucia, ['eve_tue', 'eve_thu'], 2, 12, 'ongoing', 12),
+  g(enA, 1, rgh, T.Emily, ['eve_tue', 'eve_thu'], 20, 12, 'completed'),
+  g(frA, 2, rgh, T.Claire, ['eve_sun', 'eve_tue'], -6, 12, 'planned'),
+  g(enA, 2, rba, T.Samir, ['sat_am', 'fri_am'], -2, 12, 'planned'),
 ]);
 const groups = await m.groupsCollection.find({ _id: { $in: groupDocs.map((x) => x._id) } }).populate('program').lean();
 
@@ -107,7 +124,7 @@ const makeStudent = (campus, audience, registeredAt, status = 'active') => {
   const gender = chance(0.55) ? 'female' : 'male';
   const firstName = pickOne(gender === 'female' ? FIRST_F : FIRST_M);
   const lastName = pickOne(LAST);
-  const age = audience === 'children' ? 6 + Math.floor(rnd() * 7) : audience === 'teens' ? 13 + Math.floor(rnd() * 5) : 18 + Math.floor(rnd() * 35);
+  const age = audience === 'children' ? 6 + Math.floor(rnd() * 10) : 18 + Math.floor(rnd() * 35);
   const phone = `+213 ${pickOne(['55', '66', '77'])} ${String(Math.floor(rnd() * 1e6)).padStart(6, '0')}`;
   return {
     firstName, lastName, gender, campus, status, registeredAt,
@@ -131,13 +148,11 @@ for (const group of groups.filter((x) => x.status !== 'planned')) {
     const registeredAt = dayjs(group.startDate).subtract(Math.floor(rnd() * 20), 'day').toDate();
     const student = await databaseApi.insertStudent(makeStudent(group.campus, group.program.audience, registeredAt), admin._id);
     created++;
-    const installments = pickOne([1, 1, 2, 3]);
     const discount = chance(0.15) ? 2000 : 0;
     const { enrollment, invoices } = await databaseApi.enrollStudent(
-      { studentId: student._id, groupId: group._id, installments, discount, discountReason: discount ? 'Sibling discount' : undefined, firstDueDate: group.startDate, force: true },
+      { studentId: student._id, groupId: group._id, discount, discountReason: discount ? 'Sibling discount' : undefined, enrolledAt: registeredAt, force: true },
       admin._id,
     );
-    await m.enrollmentsCollection.updateOne({ _id: enrollment._id }, { $set: { enrolledAt: registeredAt } });
     (enrolledByGroup[group._id] ??= []).push({ student, enrollment });
 
     // Payments: most pay on time, some are late, a few never paid.
@@ -153,6 +168,8 @@ for (const group of groups.filter((x) => x.status !== 'planned')) {
       else if (profile < 0.86) await databaseApi.insertPayment({ invoiceId: inv._id, amount: Math.round(inv.amount / 2), method, paidAt: paidAt > new Date() ? new Date() : paidAt }, admin._id);
       // else: overdue, nothing paid
     }
+    // Most students already received their books.
+    for (const inv of invoices.filter((x) => x.kind === 'book')) if (chance(0.85)) await databaseApi.setBookHandover(inv._id, true);
     if (group.status === 'completed') {
       await m.enrollmentsCollection.updateOne({ _id: enrollment._id }, { $set: { status: 'completed', endedAt: group.endDate } });
     }
@@ -164,11 +181,11 @@ await m.groupsCollection.updateMany({ _id: { $in: completedIds } }, { $set: { st
 // A few students left their group.
 for (const group of groups.filter((x) => x.status === 'ongoing').slice(0, 3)) {
   const e = enrolledByGroup[group._id].at(-1);
-  await databaseApi.updateEnrollment(e.enrollment._id, { status: 'dropped', cancelUnpaidInvoices: true });
+  await databaseApi.updateEnrollment(e.enrollment._id, { status: 'dropped' });
 }
 
 // ---------- waiting list (prospects)
-const wishes = [[frA, 1, rgh], [frA, 1, rgh], [frA, 2, rgh], [enA, 1, rba], [enA, 1, rba], [enA, 1, rba], [enC, 2, rgh], [esA, 2, rba], [frC, 1, rba], [enA, 3, rgh], [enT, 1, rgh], [enA, 1, rba]];
+const wishes = [[frA, 1, rgh], [frA, 1, rgh], [frA, 2, rgh], [enA, 1, rba], [enA, 1, rba], [enA, 1, rba], [enC, 2, rgh], [esA, 2, rba], [frC, 1, rba], [enA, 3, rgh], [enC, 1, rgh], [enA, 1, rba]];
 for (const [program, level, campus] of wishes) {
   await databaseApi.insertStudent(
     { ...makeStudent(campus._id, program.audience, dayjs().subtract(Math.floor(rnd() * 25), 'day').toDate(), 'prospect'), desiredProgram: program._id, desiredLevel: level, preferredSlots: pickOne(['Weekday evenings', 'Saturday morning', 'Mornings', 'Any']) },
@@ -218,5 +235,5 @@ for (const [name, run] of Object.entries(runners)) console.log(name, await run()
 
 console.log(`\nSeed done: ${created} students, ${groups.length} groups.`);
 console.log(`Log in with ${config.admin.email ?? 'admin@eltc.school'} / ${config.admin.password ?? 'Admin123!'}`);
-console.log(`Staff accounts: secretary@ / accountant@ / coordinator@eltc.school with ${staffPassword}`);
+console.log(`Secretary account: secretary@eltc.school with ${staffPassword}`);
 await disconnectDb();

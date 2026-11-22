@@ -16,7 +16,7 @@ export const runExamsNotGraded = async () => {
       message: `${exam.group?.name ?? 'Group'} · exam of ${dayjs(exam.date).format('D MMM YYYY')}. Type the results from the teacher's list.`,
       link: `/exams/${exam._id}`,
       campus: exam.campus,
-      roles: [ROLES.COORDINATOR, ROLES.SECRETARY],
+      roles: [ROLES.SECRETARY],
       dedupeKey: `exam_not_graded:${exam._id}`,
     });
     if (n) created++;

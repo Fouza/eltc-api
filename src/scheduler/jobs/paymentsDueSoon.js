@@ -22,7 +22,7 @@ export const runPaymentsDueSoon = async () => {
       message: `${r.total.toLocaleString('fr-FR')} ${settings.currency} expected. A good time to remind students.`,
       link: '/payments?tab=invoices&status=open',
       campus: r._id,
-      roles: [ROLES.ACCOUNTANT, ROLES.SECRETARY],
+      roles: [ROLES.SECRETARY],
       dedupeKey: `due_soon:${r._id}:${dayjs(today).format('YYYY-MM-DD')}`,
     });
   }

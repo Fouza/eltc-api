@@ -1,4 +1,4 @@
-// Every secret comes from the environment (.env locally, Heroku config vars in prod).
+// Every secret comes from the environment (.env locally, the host's environment variables in production).
 const env = process.env;
 
 const config = {
@@ -10,6 +10,7 @@ const config = {
   corsOrigin: env.CORS_ORIGIN?.split(',').map((s) => s.trim()) ?? [],
   bodyLimit: env.BODY_LIMIT ?? '10mb',
   admin: { email: env.ADMIN_EMAIL, password: env.ADMIN_PASSWORD },
+  cronSecret: env.CRON_SECRET, // protects POST /api/cron/run
 };
 
 export const isProd = config.env === 'production';

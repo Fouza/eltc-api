@@ -29,7 +29,7 @@ export default () => {
         message: `${group.enrolledCount} of ${group.capacity} seats taken. Consider opening a new group.`,
         link: `/groups/${group._id}`,
         campus: group.campus,
-        roles: [ROLES.COORDINATOR, ROLES.SECRETARY],
+        roles: [ROLES.SECRETARY],
         dedupeKey: `group_full:${group._id}:${group.enrolledCount}`,
       });
     }

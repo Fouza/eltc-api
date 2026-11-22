@@ -1,0 +1,26 @@
+# Runs the API's morning jobs (overdue payments, low attendance, exams to grade, payments due soon,
+# group end dates, low book stock). The Render free plan has no background process, so GitHub calls the API.
+# Needs two repository secrets: API_URL (e.g. https://eltc-api.onrender.com) and CRON_SECRET (same as on Render).
+name: Daily jobs
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # 06:00 UTC = 07:00 in Algeria. GitHub may start it a few minutes late.
+  workflow_dispatch: # "Run workflow" button for a manual run
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Wake the API up (free plan sleeps)
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 30 "${{ secrets.API_URL }}/api/health"; then echo; exit 0; fi
+            echo "Not awake yet ($i/12), retrying in 15s…"; sleep 15
+          done
+          echo "The API did not wake up"; exit 1
+      - name: Run the jobs
+        run: |
+          curl -fsS --max-time 120 -X POST "${{ secrets.API_URL }}/api/cron/run" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"

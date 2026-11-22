@@ -30,7 +30,7 @@ describe('auth and roles', () => {
   });
 
   it('admin creates a staff account that can log in, then disables it', async () => {
-    const res = await admin.post('/users', { firstName: 'New', lastName: 'Staff', email: 'new@test.io', password: 'Password123', roles: ['accountant'] });
+    const res = await admin.post('/users', { firstName: 'New', lastName: 'Staff', email: 'new@test.io', password: 'Password123', roles: ['secretary'] });
     expect(res.status).toBe(201);
     expect(res.body.password).toBeUndefined();
     const token = await loginAs('new@test.io');
@@ -39,11 +39,12 @@ describe('auth and roles', () => {
     expect((await api(token).get('/me')).status).toBe(401);
   });
 
-  it('hides finance from roles without access', async () => {
-    const coord = api(await loginAs('coord@test.io'));
-    expect((await coord.get('/invoices')).status).toBe(403);
-    const dash = await coord.get('/dashboard');
+  it('keeps settings and campuses for the admin, everything else open to the secretary', async () => {
+    expect((await sec.put('/settings', { groupAlmostFullRatio: 0.5 })).status).toBe(403);
+    expect((await sec.post('/campuses', { name: 'X', code: 'X' })).status).toBe(403);
+    expect((await sec.get('/invoices')).status).toBe(200);
+    const dash = await sec.get('/dashboard');
     expect(dash.status).toBe(200);
-    expect(dash.body.finance).toBeUndefined();
+    expect(dash.body.finance).toBeDefined();
   });
 });

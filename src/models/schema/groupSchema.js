@@ -1,7 +1,9 @@
 import { Schema } from 'mongoose';
 import { GROUP_STATUS } from '../../constants/enums.js';
+import { SESSION_KEYS } from '../../constants/sessions.js';
 
 // A class: one level of one program, at one campus, with one teacher and a weekly schedule.
+// The schedule comes from the school's fixed sessions (see constants/sessions.js).
 const slotSchema = new Schema(
   {
     day: { type: Number, min: 0, max: 6, required: true }, // 0 = Sunday
@@ -20,7 +22,8 @@ const groupSchema = new Schema(
     teacher: { type: Schema.Types.ObjectId, ref: 'teacher' },
     room: { type: String, trim: true },
     capacity: { type: Number, default: 12 },
-    schedule: { type: [slotSchema], default: [] },
+    sessions: { type: [{ type: String, enum: SESSION_KEYS }], default: [] }, // e.g. ['sat_am', 'eve_tue']
+    schedule: { type: [slotSchema], default: [] }, // derived from sessions
     startDate: Date,
     endDate: Date,
     fee: Number, // overrides the level fee when set

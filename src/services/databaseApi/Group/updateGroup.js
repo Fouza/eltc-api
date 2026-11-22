@@ -1,9 +1,20 @@
-import { groupsCollection, enrollmentsCollection, attendancesCollection, examsCollection } from '../../../models/index.js';
+import { groupsCollection, enrollmentsCollection, attendancesCollection, examsCollection, programsCollection } from '../../../models/index.js';
+import { badRequest } from '../../../helpers/errors.js';
+import { checkSessions, scheduleFromSessions, sortSessions } from '../../../constants/sessions.js';
 import getGroupById from './getGroupById.js';
 
 const updateGroup = async (id, data) => {
   const before = await groupsCollection.findById(id).lean();
-  await groupsCollection.updateOne({ _id: id }, { $set: data }, { runValidators: true });
+  // Sessions (or the program, which sets kids/adults) changed: check them and rebuild the schedule.
+  const { schedule: _schedule, ...set } = data; // the schedule always comes from the sessions
+  if (data.sessions || data.program) {
+    const program = await programsCollection.findById(data.program ?? before?.program).lean();
+    const sessions = data.sessions ?? before?.sessions ?? [];
+    const error = checkSessions(sessions, program?.audience);
+    if (error) throw badRequest(error);
+    Object.assign(set, { sessions: sortSessions(sessions), schedule: scheduleFromSessions(sessions) });
+  }
+  await groupsCollection.updateOne({ _id: id }, { $set: set }, { runValidators: true });
   // Keep denormalised fields in sync if the group moved campus.
   if (data.campus && String(data.campus) !== String(before?.campus)) {
     await Promise.all([

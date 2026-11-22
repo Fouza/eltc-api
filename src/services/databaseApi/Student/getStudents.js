@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { studentsCollection, enrollmentsCollection, invoicesCollection } from '../../../models/index.js';
 import { getPagination, paginated } from '../../../helpers/pagination.js';
 import { campusFilter } from '../../../helpers/campusScope.js';
-import { startOfToday } from '../../../helpers/dates.js';
+import { isOverdueFilter } from '../../../helpers/dates.js';
 import buildStudentSearch from './buildStudentSearch.js';
 import getStudentBalances from './getStudentBalances.js';
 
@@ -21,7 +21,7 @@ const getStudents = async (query, user) => {
     filter._id = { $in: await enrollmentsCollection.distinct('student', eFilter) };
   }
   if (query.overdue === '1' || query.overdue === 'true') {
-    const ids = await invoicesCollection.distinct('student', { status: { $in: ['unpaid', 'partial'] }, dueDate: { $lt: startOfToday() } });
+    const ids = await invoicesCollection.distinct('student', isOverdueFilter());
     filter._id = filter._id ? { $in: filter._id.$in.filter((id) => ids.some((x) => String(x) === String(id))) } : { $in: ids };
   }
 

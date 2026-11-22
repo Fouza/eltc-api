@@ -21,7 +21,7 @@ const getGroupById = async (id) => {
         $group: {
           _id: '$enrollment',
           due: { $sum: { $subtract: ['$amount', '$paidAmount'] } },
-          overdue: { $sum: { $cond: [{ $lt: ['$dueDate', startOfToday()] }, { $subtract: ['$amount', '$paidAmount'] }, 0] } },
+          overdue: { $sum: { $cond: [{ $lt: ['$overdueAt', startOfToday()] }, { $subtract: ['$amount', '$paidAmount'] }, 0] } },
         },
       },
     ]),
@@ -41,11 +41,11 @@ const getGroupById = async (id) => {
   ]);
   const balanceBy = Object.fromEntries(balances.map((b) => [String(b._id), b]));
   const attBy = Object.fromEntries(attendance.map((a) => [String(a._id), a]));
-  const sessions = await attendancesCollection.countDocuments({ group: id });
+  const sessionsHeld = await attendancesCollection.countDocuments({ group: id });
 
   return {
     ...group,
-    sessions,
+    sessionsHeld,
     roster: roster.map((e) => {
       const att = attBy[String(e.student._id)];
       return {

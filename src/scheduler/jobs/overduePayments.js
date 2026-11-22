@@ -5,10 +5,10 @@ import notify from '../../services/notifications/notify.js';
 import { ROLES } from '../../constants/roles.js';
 import { fullName } from '../../helpers/strings.js';
 
-// One alert per overdue invoice (deduplicated), for admin, accountant and secretary.
+// One alert per overdue invoice (deduplicated), for admin and secretary.
 export const runOverduePayments = async () => {
   const settings = await databaseApi.getSettings();
-  const invoices = await databaseApi.getOverdueInvoices({ graceDays: settings.overdueGraceDays });
+  const invoices = await databaseApi.getOverdueInvoices();
   let created = 0;
   for (const inv of invoices) {
     const remaining = inv.amount - inv.paidAmount;
@@ -20,7 +20,7 @@ export const runOverduePayments = async () => {
       message: `${inv.label}: ${remaining.toLocaleString('fr-FR')} ${settings.currency} due since ${dayjs(inv.dueDate).format('D MMM YYYY')} (${days} days).`,
       link: `/students/${inv.student?._id}?tab=payments`,
       campus: inv.campus,
-      roles: [ROLES.ACCOUNTANT, ROLES.SECRETARY],
+      roles: [ROLES.SECRETARY],
       dedupeKey: `overdue:${inv._id}`,
     });
     if (n) created++;

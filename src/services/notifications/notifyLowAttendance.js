@@ -18,7 +18,7 @@ const notifyLowAttendance = async (filters = {}) => {
       message: `In ${r.group.name} over the last 30 days.${contact ? ` Contact: ${contact}` : ''}`,
       link: `/students/${r.student._id}?tab=attendance`,
       campus: r.campus,
-      roles: [ROLES.COORDINATOR, ROLES.SECRETARY],
+      roles: [ROLES.SECRETARY],
       dedupeKey: `low_attendance:${r.student._id}:${r.group._id}:${r.absences}`,
     });
     if (n) created.push(n);

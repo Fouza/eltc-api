@@ -4,7 +4,7 @@ import { GENDERS, STUDENT_STATUS } from '../../constants/enums.js';
 // Mirrors the paper registration form.
 const studentSchema = new Schema(
   {
-    studentNumber: { type: String, unique: true }, // ELTC-26-0001
+    studentNumber: { type: String, unique: true }, // ELTC-2026-0001
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
     gender: { type: String, enum: GENDERS },

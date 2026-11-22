@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { disconnectDb } from '../models/connection/index.js';
 import { resetDb, seedBasics, loginAs, api } from '../testData/fixtures.js';
+import { invoicesCollection } from '../models/index.js';
+import dayjs from 'dayjs';
 
 describe('register → enroll → pay → attendance → exam', () => {
   let admin, sec, ctx, student;
@@ -29,11 +31,11 @@ describe('register → enroll → pay → attendance → exam', () => {
     expect((await sec.get(`/students?campus=${ctx.campusB._id}`)).status).toBe(403);
   });
 
-  it('enrolls in 3 installments and leaves the waiting list', async () => {
-    const res = await sec.post('/enrollments', { studentId: student._id, groupId: ctx.group._id, installments: 3, discount: 3000 });
+  it('enrolls with the monthly plan (12 weeks → 3 months) and leaves the waiting list', async () => {
+    const res = await sec.post('/enrollments', { studentId: student._id, groupId: ctx.group._id, discount: 3000 });
     expect(res.status).toBe(201);
-    expect(res.body.invoices).toHaveLength(3);
-    expect(res.body.invoices.reduce((s, i) => s + i.amount, 0)).toBe(27000);
+    expect(res.body.invoices.map((i) => i.amount)).toEqual([9000, 9000, 9000]);
+    expect(res.body.invoices[1].label).toMatch(/month 2\/3$/);
     const profile = await sec.get(`/students/${student._id}`);
     expect(profile.body.student.status).toBe('active');
     expect(profile.body.finance.due).toBe(27000);
@@ -88,5 +90,28 @@ describe('register → enroll → pay → attendance → exam', () => {
     expect((await admin.post('/enrollments', { studentId: third.body._id, groupId: ctx.group._id, force: true })).status).toBe(201);
     const notifs = await admin.get('/notifications');
     expect(notifs.body.items.some((n) => n.type === 'group_almost_full')).toBe(true);
+  });
+
+  it('an unpaid month becomes overdue only once a full month has passed', async () => {
+    const st = await admin.post('/students', { firstName: 'D', lastName: 'D', campus: ctx.campusB._id });
+    const { body } = await admin.post('/enrollments', { studentId: st.body._id, groupId: ctx.groupB._id, fee: 30000 });
+    const first = body.invoices[0];
+    const backdate = (days) => invoicesCollection.updateOne({ _id: first._id }, { $set: { dueDate: dayjs().subtract(days, 'day').toDate(), overdueAt: dayjs().subtract(days, 'day').add(1, 'month').toDate() } });
+    await backdate(20);
+    let late = await admin.get(`/invoices?student=${st.body._id}&status=overdue`);
+    expect(late.body.items).toHaveLength(0);
+    await backdate(40);
+    late = await admin.get(`/invoices?student=${st.body._id}&status=overdue`);
+    expect(late.body.items.map((i) => i._id)).toEqual([first._id]);
+  });
+
+  it('leaving a group cancels the months not started yet and keeps the current one', async () => {
+    const st = await admin.post('/students', { firstName: 'E', lastName: 'E', campus: ctx.campusB._id });
+    const { body } = await admin.post('/enrollments', { studentId: st.body._id, groupId: ctx.groupB._id, fee: 30000 });
+    expect(body.invoices).toHaveLength(3);
+    await admin.put(`/enrollments/${body.enrollment._id}`, { status: 'dropped' });
+    const { body: inv } = await admin.get(`/invoices?student=${st.body._id}`);
+    const byId = Object.fromEntries(inv.items.map((i) => [i._id, i.status]));
+    expect(body.invoices.map((i) => byId[i._id])).toEqual(['unpaid', 'cancelled', 'cancelled']);
   });
 });
