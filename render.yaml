@@ -9,7 +9,7 @@ services:
     buildCommand: npm ci --omit=dev
     startCommand: npm start
     healthCheckPath: /api/health
-    autoDeploy: true # redeploys on every push to the default branch (master)
+    autoDeploy: true # redeploys on every push to main
     envVars:
       - key: NODE_ENV
         value: production
