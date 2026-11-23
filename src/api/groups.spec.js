@@ -15,14 +15,16 @@ describe('groups use the fixed sessions', () => {
 
   const base = () => ({ name: 'Test', program: ctx.program._id, levelNumber: 1, campus: ctx.campusA._id });
 
-  it('adults: 2 sessions on different days, schedule derived from them', async () => {
+  it('adults: one whole schedule (weekend morning, weekend afternoon or evening), schedule derived from it', async () => {
     expect((await admin.post('/groups', { ...base(), sessions: ['sat_am'] })).status).toBe(400);
-    expect((await admin.post('/groups', { ...base(), sessions: ['sat_am', 'sat_pm'] })).status).toBe(400);
-    expect((await admin.post('/groups', { ...base(), sessions: ['sat_mid', 'eve_tue'] })).status).toBe(400); // midday is kids only
-    const res = await admin.post('/groups', { ...base(), sessions: ['eve_tue', 'sat_am'], schedule: [{ day: 1, startTime: '09:00', endTime: '10:00' }] });
+    expect((await admin.post('/groups', { ...base(), sessions: ['sat_am', 'eve_tue'] })).status).toBe(400);
+    expect((await admin.post('/groups', { ...base(), sessions: ['eve_sun', 'eve_tue'] })).status).toBe(400);
+    const res = await admin.post('/groups', { ...base(), sessions: ['fri_am', 'sat_am'], schedule: [{ day: 1, startTime: '09:00', endTime: '10:00' }] });
     expect(res.status).toBe(201);
-    expect(res.body.sessions).toEqual(['sat_am', 'eve_tue']);
-    expect(res.body.schedule).toEqual([{ day: 6, startTime: '08:00', endTime: '11:00' }, { day: 2, startTime: '17:00', endTime: '19:00' }]);
+    expect(res.body.sessions).toEqual(['sat_am', 'fri_am']);
+    expect(res.body.schedule).toEqual([{ day: 6, startTime: '08:00', endTime: '11:00' }, { day: 5, startTime: '08:30', endTime: '11:30' }]);
+    const evening = await admin.post('/groups', { ...base(), sessions: ['eve_thu', 'eve_sun', 'eve_tue'] });
+    expect(evening.body.schedule.map((s) => s.day)).toEqual([0, 2, 4]);
   });
 
   it('kids: one weekend session, levels Bounce 1 → 6', async () => {

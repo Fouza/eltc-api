@@ -90,7 +90,7 @@ const T = Object.fromEntries(teachers.map((t) => [t.firstName, t]));
 
 // ---------- groups
 const weeksAgo = (w) => toDay(dayjs().subtract(w, 'week'));
-// Groups use the school's fixed sessions; the name follows the app's format ("EN - A1 Adults Saturday Morning + Evening Tue").
+// Groups use the school's fixed sessions; the name follows the app's format ("EN - A1 Adults Weekend Morning").
 const langCode = { [fr._id]: 'FR', [en._id]: 'EN', [es._id]: 'ES' };
 const g = (program, levelNumber, campus, teacher, sessions, startW, weeks, status, capacity = 12) => ({
   name: `${langCode[program.language]} - ${levelLabel(levelNumber, program.levels)} ${program.audience === 'children' ? 'Kids' : 'Adults'} ${sessionsLabel(sessions)}`,
@@ -99,18 +99,18 @@ const g = (program, levelNumber, campus, teacher, sessions, startW, weeks, statu
   startDate: weeksAgo(startW), endDate: toDay(dayjs(weeksAgo(startW)).add(weeks, 'week')), status,
 });
 const groupDocs = await m.groupsCollection.insertMany([
-  g(frA, 1, rgh, T.Claire, ['eve_sun', 'eve_tue'], 6, 12, 'ongoing'),
+  g(frA, 1, rgh, T.Claire, ['eve_sun', 'eve_tue', 'eve_thu'], 6, 12, 'ongoing'),
   g(frA, 3, rgh, T.Yacine, ['sat_am', 'fri_am'], 5, 12, 'ongoing', 10),
   g(frA, 2, rba, T.Leila, ['sat_pm', 'fri_pm'], 7, 12, 'ongoing'),
   g(frC, 1, rgh, T.Nadia, ['sat_am'], 4, 10, 'ongoing', 10),
   g(frC, 2, rba, T.Claire, ['fri_am'], 4, 10, 'ongoing', 10),
-  g(enA, 2, rgh, T.Emily, ['eve_tue', 'eve_thu'], 6, 12, 'ongoing'),
-  g(enA, 4, rba, T.Samir, ['eve_sun', 'eve_thu'], 8, 12, 'ongoing'),
+  g(enA, 2, rgh, T.Emily, ['eve_sun', 'eve_tue', 'eve_thu'], 6, 12, 'ongoing'),
+  g(enA, 4, rba, T.Samir, ['eve_sun', 'eve_tue', 'eve_thu'], 8, 12, 'ongoing'),
   g(enC, 1, rgh, T.James, ['sat_pm'], 3, 10, 'ongoing', 10),
   g(enC, 3, rgh, T.Nadia, ['fri_pm'], 5, 12, 'ongoing'),
-  g(esA, 1, rba, T.Lucia, ['eve_tue', 'eve_thu'], 2, 12, 'ongoing', 12),
-  g(enA, 1, rgh, T.Emily, ['eve_tue', 'eve_thu'], 20, 12, 'completed'),
-  g(frA, 2, rgh, T.Claire, ['eve_sun', 'eve_tue'], -6, 12, 'planned'),
+  g(esA, 1, rba, T.Lucia, ['eve_sun', 'eve_tue', 'eve_thu'], 2, 12, 'ongoing', 12),
+  g(enA, 1, rgh, T.Emily, ['eve_sun', 'eve_tue', 'eve_thu'], 20, 12, 'completed'),
+  g(frA, 2, rgh, T.Claire, ['eve_sun', 'eve_tue', 'eve_thu'], -6, 12, 'planned'),
   g(enA, 2, rba, T.Samir, ['sat_am', 'fri_am'], -2, 12, 'planned'),
 ]);
 const groups = await m.groupsCollection.find({ _id: { $in: groupDocs.map((x) => x._id) } }).populate('program').lean();
