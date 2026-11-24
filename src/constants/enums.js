@@ -12,6 +12,8 @@ export const INVOICE_STATUS = ['unpaid', 'partial', 'paid', 'cancelled'];
 export const INVOICE_KINDS = ['course', 'book', 'other'];
 export const PAYMENT_METHODS = ['cash', 'card', 'transfer', 'cheque'];
 export const NOTIFICATION_SEVERITY = ['info', 'warning', 'danger'];
+export const CERTIFICATE_STATUS = ['ready', 'handed', 'revoked'];
+export const CERTIFICATE_RECEIVERS = ['student', 'guardian', 'other'];
 // Default level names of a new program. Programs store their own names, so these stay editable.
 // Adults: A1, A2, B1, B1+, B2, C1. Children: Bounce 1 → Bounce 6.
 export const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B1+', 'B2', 'C1'];
@@ -20,3 +22,12 @@ export const DEFAULT_LEVELS = { adults: CEFR_LEVELS, children: CHILDREN_LEVELS }
 export const defaultLevelNames = (audience) => DEFAULT_LEVELS[audience] ?? CEFR_LEVELS;
 export const levelLabel = (number, levels, audience) =>
   levels?.find((l) => l.number === number)?.name ?? defaultLevelNames(audience)[number - 1] ?? `Level ${number}`;
+
+// Certificates: the mention printed from the final score (percent). French-style bands: 80 / 70 / 60.
+export const MENTIONS = [
+  { min: 80, label: 'Very good' },
+  { min: 70, label: 'Good' },
+  { min: 60, label: 'Fairly good' },
+  { min: 0, label: 'Pass' },
+];
+export const mentionFor = (score) => (typeof score === 'number' ? MENTIONS.find((m) => score >= m.min).label : null);

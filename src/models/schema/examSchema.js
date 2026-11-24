@@ -10,8 +10,9 @@ const examSchema = new Schema(
     levelNumber: { type: Number, required: true },
     campus: { type: Schema.Types.ObjectId, ref: 'campus', required: true },
     date: { type: Date, required: true },
-    maxScore: { type: Number, default: 20 },
-    passScore: { type: Number, default: 10 },
+    // Scores are percentages (client's request, Nov 2026): every exam is out of 100, the pass mark is a percentage.
+    maxScore: { type: Number, default: 100 },
+    passScore: { type: Number, default: 50, min: 0, max: 100 },
     coefficient: { type: Number, default: 1 },
     status: { type: String, enum: EXAM_STATUS, default: 'scheduled' },
     results: [

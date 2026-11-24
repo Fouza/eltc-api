@@ -1,9 +1,10 @@
 import { Schema } from 'mongoose';
 import { INVOICE_KINDS, INVOICE_STATUS } from '../../constants/enums.js';
-import { addMonths } from '../../helpers/dates.js';
+import { addDays, BLOCK_DAYS } from '../../helpers/dates.js';
 
-// What a student owes: a month of a course, a book, or anything else (registration fee…).
-// Overdue = not paid/cancelled and overdueAt in the past. Courses: one month after the due date. Books: when the level ends.
+// What a student owes: a 4-week block of a course, a book, or anything else (registration fee…).
+// Overdue = not paid/cancelled and overdueAt in the past. Courses: the first day of the next 4-week block (set by the plan).
+// Books: when the level ends. Anything else: 4 weeks after the due date.
 const invoiceSchema = new Schema(
   {
     number: { type: String, unique: true }, // INV-2026-0001
@@ -20,7 +21,7 @@ const invoiceSchema = new Schema(
     dueDate: { type: Date, required: true },
     overdueAt: { type: Date }, // set automatically from dueDate when missing
     status: { type: String, enum: INVOICE_STATUS, default: 'unpaid' },
-    installment: { index: Number, count: Number },
+    installment: { index: Number, count: Number, fromWeek: Number, toWeek: Number },
     lastReminderAt: Date,
     notes: { type: String, trim: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'user' },
@@ -29,7 +30,7 @@ const invoiceSchema = new Schema(
 );
 
 invoiceSchema.pre('validate', function setOverdueAt() {
-  if (!this.overdueAt && this.dueDate) this.overdueAt = addMonths(this.dueDate, 1);
+  if (!this.overdueAt && this.dueDate) this.overdueAt = addDays(this.dueDate, BLOCK_DAYS);
 });
 
 invoiceSchema.index({ status: 1, overdueAt: 1 });

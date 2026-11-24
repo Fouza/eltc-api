@@ -57,8 +57,10 @@ const enrollStudent = async (
       : buildMonthlyPlan({ total: netFee, weeks, startDate: group.startDate, joinDate: enrolledAt ?? new Date() });
     const levelName = levelLabel(group.levelNumber, group.program.levels, group.program.audience);
     for (const { share, ...part } of parts) {
-      const { index, count } = part.installment;
-      const suffix = count <= 1 ? '' : plan === 'custom' ? ` (${index}/${count})` : ` · month ${index}/${count}${share < 1 ? ' (half)' : ''}`;
+      const { index, count, fromWeek, toWeek } = part.installment;
+      // "· weeks 5–8" for a 4-week block; one block covering the whole level needs no suffix.
+      const whole = count <= 1 && share >= 1;
+      const suffix = plan === 'custom' ? (count <= 1 ? '' : ` (${index}/${count})`) : whole ? '' : fromWeek === toWeek ? ` · week ${fromWeek}` : ` · weeks ${fromWeek}–${toWeek}`;
       const label = `${group.program.name} · ${levelName}${suffix}`;
       invoices.push(
         (

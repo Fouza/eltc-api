@@ -17,6 +17,8 @@ export const CAN = {
   managePrograms: STAFF,
   manageBooks: STAFF,
   deleteBooks: ADMIN_ONLY,
+  manageCertificates: STAFF,
+  revokeCertificates: ADMIN_ONLY,
   manageTeachers: STAFF,
   manageGroups: STAFF,
   manageStudents: STAFF,

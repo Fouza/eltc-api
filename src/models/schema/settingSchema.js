@@ -7,8 +7,7 @@ const settingSchema = new Schema(
     schoolName: { type: String, default: 'ELTC School' },
     currency: { type: String, default: 'DZD' },
     locale: { type: String, default: 'fr-FR' },
-    defaultMaxScore: { type: Number, default: 20 },
-    defaultPassScore: { type: Number, default: 10 },
+    defaultPassScore: { type: Number, default: 50, min: 0, max: 100 }, // % — exams are scored in percent
     lowAttendanceThreshold: { type: Number, default: 3 }, // absences in the last 30 days
     groupAlmostFullRatio: { type: Number, default: 0.9 },
   },

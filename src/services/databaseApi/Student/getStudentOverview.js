@@ -1,5 +1,5 @@
 import {
-  enrollmentsCollection, invoicesCollection, paymentsCollection, attendancesCollection, examsCollection,
+  enrollmentsCollection, invoicesCollection, paymentsCollection, attendancesCollection, examsCollection, certificatesCollection,
 } from '../../../models/index.js';
 import getStudentById from './getStudentById.js';
 import { isOverdue } from '../../../helpers/dates.js';
@@ -9,7 +9,7 @@ const getStudentOverview = async (id) => {
   const student = await getStudentById(id);
   if (!student) return null;
 
-  const [enrollments, invoices, payments, attendance, exams] = await Promise.all([
+  const [enrollments, invoices, payments, attendance, exams, certificates] = await Promise.all([
     enrollmentsCollection
       .find({ student: id })
       .populate({
@@ -33,6 +33,7 @@ const getStudentOverview = async (id) => {
       .populate('group', 'name')
       .sort({ date: -1 })
       .lean(),
+    certificatesCollection.find({ student: id }, { number: 1, enrollment: 1, status: 1, levelName: 1, programName: 1, issuedAt: 1, handedOverAt: 1, handedOverTo: 1 }).sort({ issuedAt: -1 }).lean(),
   ]);
 
   const open = invoices.filter((i) => ['unpaid', 'partial'].includes(i.status));
@@ -61,6 +62,7 @@ const getStudentOverview = async (id) => {
       rate: counted ? Math.round(((counted - absences) / counted) * 100) : null,
     },
     grades: exams.map((e) => ({ ...e, result: e.results[0], results: undefined })),
+    certificates,
   };
 };
 

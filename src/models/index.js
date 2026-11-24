@@ -16,6 +16,7 @@ import notificationSchema from './schema/notificationSchema.js';
 import settingSchema from './schema/settingSchema.js';
 import logSchema from './schema/logSchema.js';
 import bookSchema from './schema/bookSchema.js';
+import certificateSchema from './schema/certificateSchema.js';
 
 // Collection names are explicit (Mongoose would name the 'campus' model 'campus', not 'campuses').
 
@@ -36,3 +37,4 @@ export const notificationsCollection = mongoose.model('notification', notificati
 export const settingsCollection = mongoose.model('setting', settingSchema, 'settings');
 export const logsCollection = mongoose.model('log', logSchema, 'logs');
 export const booksCollection = mongoose.model('book', bookSchema, 'books');
+export const certificatesCollection = mongoose.model('certificate', certificateSchema, 'certificates');

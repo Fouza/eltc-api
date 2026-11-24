@@ -20,6 +20,9 @@ import dashboard from './dashboard.js';
 import search from './search.js';
 import settings from './settings.js';
 import cron from './cron.js';
+import certificates from './certificates.js';
+import * as databaseApi from '../services/databaseApi/index.js';
+import { notFound } from '../helpers/errors.js';
 
 // Mount order = auth zones: public routes first, then the auth middleware, then everything else.
 export default ({ config }) => {
@@ -29,6 +32,12 @@ export default ({ config }) => {
   api.get('/health', (_req, res) => res.json({ ok: true, env: config.env }));
   api.use('/auth', authRouter({ config }));
   api.use('/cron', cron({ config })); // protected by its own secret, not by staff login
+  // Certificate check from the QR code: anyone with the (random, unguessable) code sees the certificate is genuine.
+  api.get('/verify/:code', async (req, res) => {
+    const cert = await databaseApi.getPublicCertificate(req.params.code);
+    if (!cert) throw notFound('No certificate with this code');
+    res.json(cert);
+  });
 
   // ---- logged-in staff
   api.use(auth);
@@ -38,6 +47,7 @@ export default ({ config }) => {
   api.use('/languages', languages({ config }));
   api.use('/programs', programs({ config }));
   api.use('/books', books({ config }));
+  api.use('/certificates', certificates({ config }));
   api.use('/teachers', teachers({ config }));
   api.use('/groups', groups({ config }));
   api.use('/students', students({ config }));

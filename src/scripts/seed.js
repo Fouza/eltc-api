@@ -129,6 +129,7 @@ const makeStudent = (campus, audience, registeredAt, status = 'active') => {
   return {
     firstName, lastName, gender, campus, status, registeredAt,
     birthDate: dayjs().subtract(age, 'year').subtract(Math.floor(rnd() * 300), 'day').toDate(),
+    birthPlace: pickOne(['Alger', 'Reghaia', 'Rouiba', 'Boumerdès', 'Tizi Ouzou', 'Blida', 'Béjaïa', 'Oran']),
     phone: audience === 'adults' ? phone : undefined,
     email: audience === 'adults' && chance(0.7) ? `${firstName}.${lastName}${Math.floor(rnd() * 99)}@mail.com`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') : undefined,
     occupation: audience === 'adults' ? pickOne(['Student', 'Engineer', 'Doctor', 'Teacher', 'Accountant', 'Pharmacist', 'Sales']) : 'Pupil',
@@ -217,7 +218,7 @@ for (const group of groups.filter((x) => x.status === 'ongoing')) {
 // ---------- exams
 for (const group of groups.filter((x) => x.status !== 'planned')) {
   const roster = enrolledByGroup[group._id] ?? [];
-  const results = () => roster.map(({ student }) => (chance(0.05) ? { student: student._id, absent: true } : { student: student._id, score: Math.round((7 + rnd() * 13) * 2) / 2 }));
+  const results = () => roster.map(({ student }) => (chance(0.05) ? { student: student._id, absent: true } : { student: student._id, score: Math.round(35 + rnd() * 65) }));
   const quiz = await databaseApi.insertExam({ group: group._id, title: 'Quiz 1', type: 'quiz', date: dayjs(group.startDate).add(3, 'week').toDate() }, admin._id);
   if (quiz.date < new Date()) await databaseApi.saveExamResults(quiz._id, results(), admin._id);
   if (group.status === 'completed') {
@@ -228,6 +229,22 @@ for (const group of groups.filter((x) => x.status !== 'planned')) {
     if (mid.date < dayjs().subtract(2, 'day').toDate() && chance(0.6)) await databaseApi.saveExamResults(mid._id, results(), admin._id);
     await databaseApi.insertExam({ group: group._id, title: 'Final exam', type: 'final', date: dayjs(group.endDate).subtract(2, 'day').toDate(), coefficient: 2 }, admin._id);
   }
+}
+
+// ---------- certificates: the completed group's passers got theirs (most already collected); a few passed by hand still wait
+{
+  const passed = await m.enrollmentsCollection.find({ finalResult: 'passed' }).lean();
+  const issued = passed.slice(0, Math.ceil(passed.length * 0.7));
+  const { ids } = await databaseApi.issueCertificates({ enrollmentIds: issued.map((e) => e._id) }, admin);
+  await databaseApi.markCertificatesPrinted(ids);
+  for (const id of ids.slice(0, Math.floor(ids.length * 0.6))) {
+    await databaseApi.handOverCertificate(id, chance(0.7) ? { receiver: 'student' } : { receiver: 'guardian', handedOverTo: `${pickOne(FIRST_M)} ${pickOne(LAST)}` }, secretary._id);
+  }
+  // A couple issued long ago and never collected, to show the "waiting 30+ days" reminder.
+  await m.certificatesCollection.updateMany({ _id: { $in: ids.slice(-2) }, status: 'ready' }, { $set: { issuedAt: dayjs().subtract(45, 'day').toDate() } });
+  // Two more students passed by hand on their profile, still to issue.
+  const more = await m.enrollmentsCollection.find({ status: 'active', finalResult: 'pending' }).limit(2).lean();
+  await m.enrollmentsCollection.updateMany({ _id: { $in: more.map((e) => e._id) } }, { $set: { finalResult: 'passed' } });
 }
 
 // ---------- notifications from the daily jobs

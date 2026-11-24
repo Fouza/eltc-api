@@ -32,6 +32,9 @@ describe('groups use the fixed sessions', () => {
     const kidsGroup = { ...base(), program: kids._id };
     expect((await admin.post('/groups', { ...kidsGroup, sessions: ['eve_tue'] })).status).toBe(400);
     expect((await admin.post('/groups', { ...kidsGroup, sessions: ['sat_am', 'fri_am'] })).status).toBe(400);
+    expect((await admin.post('/groups', { ...base(), sessions: ['tue_pm'] })).status).toBe(400); // kids only
+    const tue = await admin.post('/groups', { ...kidsGroup, sessions: ['tue_pm'] });
+    expect(tue.body.schedule).toEqual([{ day: 2, startTime: '13:30', endTime: '16:30' }]);
     const res = await admin.post('/groups', { ...kidsGroup, sessions: ['sat_mid'] });
     expect(res.status).toBe(201);
     expect(res.body.schedule).toEqual([{ day: 6, startTime: '11:00', endTime: '14:00' }]);

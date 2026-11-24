@@ -13,7 +13,7 @@ const saveExamResults = async (id, results = [], userId) => {
     if (!student || (!hasScore && !r.absent && !r.comment)) continue;
     const score = hasScore ? Number(r.score) : undefined;
     if (hasScore && (Number.isNaN(score) || score < 0 || score > exam.maxScore)) {
-      throw badRequest(`Scores must be between 0 and ${exam.maxScore}`);
+      throw badRequest(`Scores are percentages: between 0 and ${exam.maxScore}`);
     }
     clean.push({ student, score: r.absent ? undefined : score, absent: Boolean(r.absent), comment: r.comment || undefined });
   }

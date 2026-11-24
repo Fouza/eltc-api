@@ -2,7 +2,7 @@ import { settingsCollection } from '../../../models/index.js';
 import { pick } from '../../../helpers/strings.js';
 
 const FIELDS = [
-  'schoolName', 'currency', 'locale', 'defaultMaxScore', 'defaultPassScore',
+  'schoolName', 'currency', 'locale', 'defaultPassScore',
   'lowAttendanceThreshold', 'groupAlmostFullRatio',
 ];
 

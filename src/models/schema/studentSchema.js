@@ -9,6 +9,7 @@ const studentSchema = new Schema(
     lastName: { type: String, required: true, trim: true },
     gender: { type: String, enum: GENDERS },
     birthDate: Date,
+    birthPlace: { type: String, trim: true },
     phone: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },
     address: { type: String, trim: true },

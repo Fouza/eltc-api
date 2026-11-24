@@ -2,7 +2,7 @@ import { studentsCollection } from '../../../models/index.js';
 import generateNumber from '../Counter/generateNumber.js';
 import { escapeRegex } from '../../../helpers/strings.js';
 
-const FIELDS = ['firstName', 'lastName', 'gender', 'birthDate', 'phone', 'email', 'address', 'city', 'occupation', 'source', 'notes'];
+const FIELDS = ['firstName', 'lastName', 'gender', 'birthDate', 'birthPlace', 'phone', 'email', 'address', 'city', 'occupation', 'source', 'notes'];
 
 // Rows come from a spreadsheet already parsed by the web app (CSV → JSON).
 // Duplicates (same first name + last name + phone) are skipped, not overwritten.

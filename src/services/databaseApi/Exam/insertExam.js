@@ -7,9 +7,9 @@ const insertExam = async (data, userId) => {
   if (!group) throw notFound('Group not found');
   const settings = await getSettings();
   const exam = await examsCollection.create({
-    maxScore: settings.defaultMaxScore,
     passScore: settings.defaultPassScore,
     ...data,
+    maxScore: 100, // scores are percentages
     program: group.program,
     levelNumber: group.levelNumber,
     campus: group.campus,

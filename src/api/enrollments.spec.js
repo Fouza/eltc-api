@@ -31,11 +31,13 @@ describe('register → enroll → pay → attendance → exam', () => {
     expect((await sec.get(`/students?campus=${ctx.campusB._id}`)).status).toBe(403);
   });
 
-  it('enrolls with the monthly plan (12 weeks → 3 months) and leaves the waiting list', async () => {
+  it('enrolls with 4-week blocks (12 weeks → 3 blocks) and leaves the waiting list', async () => {
     const res = await sec.post('/enrollments', { studentId: student._id, groupId: ctx.group._id, discount: 3000 });
     expect(res.status).toBe(201);
     expect(res.body.invoices.map((i) => i.amount)).toEqual([9000, 9000, 9000]);
-    expect(res.body.invoices[1].label).toMatch(/month 2\/3$/);
+    expect(res.body.invoices[1].label).toMatch(/weeks 5–8$/);
+    // Each block is overdue the day the next one is due.
+    expect(res.body.invoices[0].overdueAt).toBe(res.body.invoices[1].dueDate);
     const profile = await sec.get(`/students/${student._id}`);
     expect(profile.body.student.status).toBe('active');
     expect(profile.body.finance.due).toBe(27000);
@@ -73,11 +75,13 @@ describe('register → enroll → pay → attendance → exam', () => {
 
   it('a final exam sets the final result', async () => {
     const exam = await sec.post('/exams', { group: ctx.group._id, title: 'Final', type: 'final', date: '2026-11-10' });
-    expect(exam.body.maxScore).toBe(20);
-    expect((await sec.put(`/exams/${exam.body._id}/results`, { results: [{ student: student._id, score: 25 }] })).status).toBe(400);
-    const res = await sec.put(`/exams/${exam.body._id}/results`, { results: [{ student: student._id, score: 14.5 }] });
+    // Percentages: out of 100, pass mark 50 %.
+    expect(exam.body.maxScore).toBe(100);
+    expect(exam.body.passScore).toBe(50);
+    expect((await sec.put(`/exams/${exam.body._id}/results`, { results: [{ student: student._id, score: 120 }] })).status).toBe(400);
+    const res = await sec.put(`/exams/${exam.body._id}/results`, { results: [{ student: student._id, score: 72.5 }] });
     expect(res.body.status).toBe('graded');
-    expect(res.body.stats.average).toBe(14.5);
+    expect(res.body.stats.average).toBe(72.5);
     const profile = await sec.get(`/students/${student._id}`);
     expect(profile.body.enrollments[0].finalResult).toBe('passed');
   });
@@ -92,20 +96,20 @@ describe('register → enroll → pay → attendance → exam', () => {
     expect(notifs.body.items.some((n) => n.type === 'group_almost_full')).toBe(true);
   });
 
-  it('an unpaid month becomes overdue only once a full month has passed', async () => {
+  it('an unpaid block becomes overdue once its 4 weeks have passed', async () => {
     const st = await admin.post('/students', { firstName: 'D', lastName: 'D', campus: ctx.campusB._id });
     const { body } = await admin.post('/enrollments', { studentId: st.body._id, groupId: ctx.groupB._id, fee: 30000 });
     const first = body.invoices[0];
-    const backdate = (days) => invoicesCollection.updateOne({ _id: first._id }, { $set: { dueDate: dayjs().subtract(days, 'day').toDate(), overdueAt: dayjs().subtract(days, 'day').add(1, 'month').toDate() } });
+    const backdate = (days) => invoicesCollection.updateOne({ _id: first._id }, { $set: { dueDate: dayjs().subtract(days, 'day').toDate(), overdueAt: dayjs().subtract(days, 'day').add(28, 'day').toDate() } });
     await backdate(20);
     let late = await admin.get(`/invoices?student=${st.body._id}&status=overdue`);
     expect(late.body.items).toHaveLength(0);
-    await backdate(40);
+    await backdate(30);
     late = await admin.get(`/invoices?student=${st.body._id}&status=overdue`);
     expect(late.body.items.map((i) => i._id)).toEqual([first._id]);
   });
 
-  it('leaving a group cancels the months not started yet and keeps the current one', async () => {
+  it('leaving a group cancels the blocks not started yet and keeps the current one', async () => {
     const st = await admin.post('/students', { firstName: 'E', lastName: 'E', campus: ctx.campusB._id });
     const { body } = await admin.post('/enrollments', { studentId: st.body._id, groupId: ctx.groupB._id, fee: 30000 });
     expect(body.invoices).toHaveLength(3);
