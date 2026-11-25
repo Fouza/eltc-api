@@ -3,7 +3,9 @@ import { PAYMENT_METHODS } from '../../constants/enums.js';
 
 const paymentSchema = new Schema(
   {
-    receiptNumber: { type: String, unique: true }, // REC-2026-0001
+    receiptNumber: { type: String, unique: true }, // REC-2026-0001 (REC-2026-0001-2, -3… for the other lines of the same receipt)
+    // One receipt can pay several invoices: every line shares the main receipt number here (empty on older payments).
+    receipt: { type: String },
     student: { type: Schema.Types.ObjectId, ref: 'student', required: true },
     invoice: { type: Schema.Types.ObjectId, ref: 'invoice', required: true },
     campus: { type: Schema.Types.ObjectId, ref: 'campus', required: true },
@@ -21,5 +23,6 @@ paymentSchema.index({ paidAt: -1 });
 paymentSchema.index({ campus: 1, paidAt: -1 });
 paymentSchema.index({ student: 1, paidAt: -1 });
 paymentSchema.index({ invoice: 1 });
+paymentSchema.index({ receipt: 1 });
 
 export default paymentSchema;
