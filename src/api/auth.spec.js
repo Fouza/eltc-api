@@ -39,11 +39,13 @@ describe('auth and roles', () => {
     expect((await api(token).get('/me')).status).toBe(401);
   });
 
-  it('keeps settings and campuses for the admin, everything else open to the secretary', async () => {
+  it('keeps settings, campuses and the dashboard for the admin, the daily work open to the secretary', async () => {
     expect((await sec.put('/settings', { groupAlmostFullRatio: 0.5 })).status).toBe(403);
+    expect((await sec.get('/settings')).status).toBe(200); // school name, currency… are read by every screen
     expect((await sec.post('/campuses', { name: 'X', code: 'X' })).status).toBe(403);
     expect((await sec.get('/invoices')).status).toBe(200);
-    const dash = await sec.get('/dashboard');
+    expect((await sec.get('/dashboard')).status).toBe(403);
+    const dash = await admin.get('/dashboard');
     expect(dash.status).toBe(200);
     expect(dash.body.finance).toBeDefined();
   });
