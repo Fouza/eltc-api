@@ -33,7 +33,7 @@ const getInvoices = async (query, user) => {
   const [items, total, [totals]] = await Promise.all([
     invoicesCollection
       .find(filter)
-      .populate('student', 'firstName lastName studentNumber phone guardian')
+      .populate('student', 'firstName lastName studentNumber phone phone2 guardian')
       .populate('campus', 'name code color')
       .populate('group', 'name')
       .populate('book', 'title')

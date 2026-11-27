@@ -49,6 +49,21 @@ export default () => {
     res.json(await databaseApi.deleteGroup(req.params.id));
   });
 
+  // Cancel one session (holiday, Eid, teacher absent…) or restore it. Body: { date: 'YYYY-MM-DD', reason, note }.
+  router.post('/:id/cancellations', requireRoles(CAN.manageGroups), async (req, res) => {
+    const group = await databaseApi.getGroupById(req.params.id);
+    if (!group) throw notFound('Group not found');
+    assertCampusAccess(req.user, group.campus?._id);
+    res.status(201).json(await databaseApi.cancelSession(req.params.id, req.body, req.user_id));
+  });
+
+  router.delete('/:id/cancellations/:date', requireRoles(CAN.manageGroups), async (req, res) => {
+    const group = await databaseApi.getGroupById(req.params.id);
+    if (!group) throw notFound('Group not found');
+    assertCampusAccess(req.user, group.campus?._id);
+    res.json(await databaseApi.restoreSession(req.params.id, req.params.date));
+  });
+
   // End of level: move students (by default those who passed) to the next-level group.
   router.post('/:id/promote', requireRoles(CAN.manageEnrollments), async (req, res) => {
     res.json(await databaseApi.promoteGroup(req.params.id, req.body, req.user_id));

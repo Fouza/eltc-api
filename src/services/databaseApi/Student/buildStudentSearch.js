@@ -23,7 +23,7 @@ const buildStudentSearch = (q) => {
       { lastName: prefixRegex(text) },
       { studentNumber: prefixRegex(text) },
       { email: prefixRegex(text) },
-      ...(/^\+?\d{3,}$/.test(digits) ? [{ phone: prefixRegex(digits) }, { 'guardian.phone': prefixRegex(digits) }] : []),
+      ...(/^\+?\d{3,}$/.test(digits) ? [{ phone: prefixRegex(digits) }, { phone2: prefixRegex(digits) }, { 'guardian.phone': prefixRegex(digits) }] : []),
     ],
   };
 };

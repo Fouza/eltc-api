@@ -6,7 +6,7 @@ const INVOICE_FIELDS = 'number label amount paidAmount status dueDate installmen
 const getPaymentById = async (id) => {
   const payment = await paymentsCollection
     .findById(id)
-    .populate('student', 'firstName lastName studentNumber phone guardian')
+    .populate('student', 'firstName lastName studentNumber phone phone2 guardian')
     .populate('invoice', INVOICE_FIELDS)
     .populate('campus', 'name code address city phone email')
     .populate('receivedBy', 'firstName lastName')

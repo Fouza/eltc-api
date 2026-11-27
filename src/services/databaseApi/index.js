@@ -63,11 +63,13 @@ export { default as saveExamResults } from './Exam/saveExamResults.js';
 export { default as updateExam } from './Exam/updateExam.js';
 
 // Group
+export { default as cancelSession } from './Group/cancelSession.js';
 export { default as deleteGroup } from './Group/deleteGroup.js';
 export { default as getGroupById } from './Group/getGroupById.js';
 export { default as getGroupRoster } from './Group/getGroupRoster.js';
 export { default as getGroups } from './Group/getGroups.js';
 export { default as insertGroup } from './Group/insertGroup.js';
+export { default as restoreSession } from './Group/restoreSession.js';
 export { default as updateGroup } from './Group/updateGroup.js';
 
 // Invoice

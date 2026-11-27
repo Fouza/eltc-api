@@ -7,6 +7,7 @@ import buildMonthlyPlan from '../Invoice/buildMonthlyPlan.js';
 import { levelLabel } from '../../../constants/enums.js';
 import { toDay } from '../../../helpers/dates.js';
 import getBooksForLevel from '../Book/getBooksForLevel.js';
+import { afterCancellations } from '../../../helpers/classDays.js';
 
 // Puts a student in a group and creates the invoices.
 // plan 'monthly' (default): the fee split by the level's months, due at the start of each month (see buildMonthlyPlan).
@@ -56,7 +57,9 @@ const enrollStudent = async (
       ? buildInstallments(netFee, installments, firstDueDate ? new Date(firstDueDate) : new Date())
       : buildMonthlyPlan({ total: netFee, weeks, startDate: group.startDate, joinDate: enrolledAt ?? new Date() });
     const levelName = levelLabel(group.levelNumber, group.program.levels, group.program.audience);
-    for (const { share, ...part } of parts) {
+    for (const { share, ...raw } of parts) {
+      // Sessions already cancelled in this group push the blocks back (see Group/cancelSession.js).
+      const part = group.cancelledSessions?.length ? { ...raw, dueDate: afterCancellations(group, raw.dueDate), overdueAt: afterCancellations(group, raw.overdueAt) } : raw;
       const { index, count, fromWeek, toWeek } = part.installment;
       // "· weeks 5–8" for a 4-week block; one block covering the whole level needs no suffix.
       const whole = count <= 1 && share >= 1;

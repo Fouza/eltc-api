@@ -3,7 +3,7 @@ import { invoicesCollection, paymentsCollection } from '../../../models/index.js
 const getInvoiceById = async (id) => {
   const invoice = await invoicesCollection
     .findById(id)
-    .populate('student', 'firstName lastName studentNumber phone guardian')
+    .populate('student', 'firstName lastName studentNumber phone phone2 guardian')
     .populate('campus', 'name code')
     .lean();
   if (!invoice) return null;

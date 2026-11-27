@@ -2,11 +2,12 @@ import { attendancesCollection, groupsCollection } from '../../../models/index.j
 import { notFound } from '../../../helpers/errors.js';
 import { toDay } from '../../../helpers/dates.js';
 import getGroupRoster from '../Group/getGroupRoster.js';
+import { sessionProblem } from '../../../helpers/classDays.js';
 
 // The sheet for a group on a date. If nothing was typed yet, returns the roster with everyone "present"
 // so the secretary only clicks the exceptions from the teacher's paper list.
 const getAttendanceSheet = async (groupId, date) => {
-  const group = await groupsCollection.findById(groupId, { name: 1, campus: 1, teacher: 1, schedule: 1 }).lean();
+  const group = await groupsCollection.findById(groupId, { name: 1, campus: 1, teacher: 1, schedule: 1, startDate: 1, endDate: 1, cancelledSessions: 1 }).lean();
   if (!group) throw notFound('Group not found');
   const day = toDay(date);
   const [sheet, roster] = await Promise.all([
@@ -21,6 +22,9 @@ const getAttendanceSheet = async (groupId, date) => {
   return {
     _id: sheet?._id ?? null,
     exists: Boolean(sheet),
+    // Why there is no class that day (outside the group's dates, no class that weekday, cancelled). A saved sheet is still shown.
+    noSession: sessionProblem(group, day),
+    cancelled: (group.cancelledSessions ?? []).find((c) => toDay(c.date).getTime() === day.getTime()) ?? null,
     group,
     date: day,
     topic: sheet?.topic ?? '',

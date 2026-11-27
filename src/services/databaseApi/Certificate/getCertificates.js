@@ -13,7 +13,7 @@ const getCertificates = async (query = {}, user) => {
   }
   const rows = await certificatesCollection
     .find(filter)
-    .populate('student', 'firstName lastName studentNumber phone guardian')
+    .populate('student', 'firstName lastName studentNumber phone phone2 guardian')
     .populate('campus', 'name code')
     .populate('handedOverBy', 'firstName lastName')
     .populate('issuedBy', 'firstName lastName')

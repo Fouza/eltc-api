@@ -13,6 +13,8 @@ export const INVOICE_KINDS = ['course', 'book', 'other'];
 export const PAYMENT_METHODS = ['cash', 'card', 'transfer', 'cheque'];
 export const NOTIFICATION_SEVERITY = ['info', 'warning', 'danger'];
 export const CERTIFICATE_STATUS = ['ready', 'handed', 'revoked'];
+// Why a session didn't take place (timetable). Keep in sync with eltc-web/src/data/enums.js.
+export const SESSION_CANCEL_REASONS = ['holiday', 'eid', 'teacher_absent', 'other'];
 export const CERTIFICATE_RECEIVERS = ['student', 'guardian', 'other'];
 // Default level names of a new program. Programs store their own names, so these stay editable.
 // Adults: A1, A2, B1, B1+, B2, C1. Children: Bounce 1 → Bounce 6.

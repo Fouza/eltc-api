@@ -10,7 +10,7 @@ const getCertificateCandidates = async (query = {}, user) => {
   const done = await certifiedEnrollmentIds();
   const rows = await enrollmentsCollection
     .find({ ...filter, finalResult: 'passed', _id: { $nin: done } })
-    .populate('student', 'firstName lastName studentNumber phone guardian')
+    .populate('student', 'firstName lastName studentNumber phone phone2 guardian')
     .populate('group', 'name startDate endDate')
     .populate('program', 'name audience levels color')
     .populate('campus', 'name code')

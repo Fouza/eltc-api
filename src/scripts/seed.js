@@ -8,7 +8,7 @@ import * as databaseApi from '../services/databaseApi/index.js';
 import { runners } from '../scheduler/jobs/index.js';
 import { toDay } from '../helpers/dates.js';
 import { defaultLevelNames, levelLabel } from '../constants/enums.js';
-import { scheduleFromSessions, sessionsLabel, sortSessions } from '../constants/sessions.js';
+import { preferredTimesFor, scheduleFromSessions, sessionsLabel, sortSessions } from '../constants/sessions.js';
 
 if (config.env === 'production' || /prod/i.test(config.mongoUri ?? '')) throw new Error('Refusing to seed a production database');
 
@@ -189,7 +189,7 @@ for (const group of groups.filter((x) => x.status === 'ongoing').slice(0, 3)) {
 const wishes = [[frA, 1, rgh], [frA, 1, rgh], [frA, 2, rgh], [enA, 1, rba], [enA, 1, rba], [enA, 1, rba], [enC, 2, rgh], [esA, 2, rba], [frC, 1, rba], [enA, 3, rgh], [enC, 1, rgh], [enA, 1, rba]];
 for (const [program, level, campus] of wishes) {
   await databaseApi.insertStudent(
-    { ...makeStudent(campus._id, program.audience, dayjs().subtract(Math.floor(rnd() * 25), 'day').toDate(), 'prospect'), desiredProgram: program._id, desiredLevel: level, preferredSlots: pickOne(['Weekday evenings', 'Saturday morning', 'Mornings', 'Any']) },
+    { ...makeStudent(campus._id, program.audience, dayjs().subtract(Math.floor(rnd() * 25), 'day').toDate(), 'prospect'), desiredProgram: program._id, desiredLevel: level, preferredTime: pickOne([...preferredTimesFor(program.audience).map((t) => t.key), null]) },
     secretary._id,
   );
   created++;

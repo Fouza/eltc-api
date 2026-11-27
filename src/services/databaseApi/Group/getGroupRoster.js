@@ -4,7 +4,7 @@ import { enrollmentsCollection } from '../../../models/index.js';
 const getGroupRoster = async (groupId, statuses = ['active']) => {
   const roster = await enrollmentsCollection
     .find({ group: groupId, status: { $in: statuses } })
-    .populate('student', 'firstName lastName studentNumber phone guardian birthDate status')
+    .populate('student', 'firstName lastName studentNumber phone phone2 guardian birthDate status')
     .lean();
   return roster
     .filter((e) => e.student)
